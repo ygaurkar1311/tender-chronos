@@ -1,5 +1,14 @@
 export type TenderStatus = 'draft' | 'pending_approval' | 'approved' | 'open' | 'closed' | 'awarded';
 
+export interface ApprovalRecord {
+  approvalId: string;
+  otp: string;
+  digitalSignature: string;
+  timestamp: string;
+  approvedBy: string;
+  approverEmail: string;
+}
+
 export interface Tender {
   id: string;
   title: string;
@@ -12,9 +21,9 @@ export interface Tender {
   coordinatorName: string;
   status: TenderStatus;
   approvals: {
-    dean: boolean;
-    director: boolean;
-    registrar: boolean;
+    dean: boolean | ApprovalRecord;
+    director: boolean | ApprovalRecord;
+    registrar: boolean | ApprovalRecord;
   };
   createdAt: string;
 }

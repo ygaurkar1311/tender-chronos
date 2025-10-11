@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { api } from '@/utils/api';
 import { Tender } from '@/utils/mockData';
-import TenderCard from '@/components/TenderCard';
-import { FileText, Clock, CheckCircle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { FileText, Clock, CheckCircle, XCircle, Building, Calendar, User } from 'lucide-react';
+import ApprovalModal, { ApprovalData } from '@/components/ApprovalModal';
+import { useNavigate } from 'react-router-dom';
 
 const DeanDashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
     loadTenders();
@@ -23,8 +34,47 @@ const DeanDashboard = () => {
     }
   };
 
-  const pendingTenders = tenders.filter(t => t.status === 'pending_approval' && !t.approvals.dean);
-  const approvedCount = tenders.filter(t => t.approvals.dean).length;
+  const pendingTenders = tenders.filter(
+    t => t.status === 'pending_approval' && 
+    (t.approvals.dean === false || typeof t.approvals.dean === 'boolean')
+  );
+  const approvedCount = tenders.filter(t => t.approvals.dean && typeof t.approvals.dean !== 'boolean').length;
+
+  const handleApprovalClick = (tender: Tender, action: 'approve' | 'reject') => {
+    setSelectedTender(tender);
+    setApprovalAction(action);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprovalConfirm = async (approvalData: ApprovalData) => {
+    if (!selectedTender || !user) return;
+
+    try {
+      if (approvalAction === 'approve') {
+        await api.approveTender(selectedTender.id, 'dean', {
+          ...approvalData,
+          approvedBy: user.username,
+          approverEmail: user.email,
+        });
+        toast.success('Tender approved successfully', {
+          description: `Approval ID: ${approvalData.approvalId}`,
+        });
+      } else {
+        await api.rejectTender(selectedTender.id, 'dean', {
+          approvalId: approvalData.approvalId,
+          timestamp: approvalData.timestamp,
+          rejectedBy: user.username,
+          rejectorEmail: user.email,
+        });
+        toast.error('Tender rejected', {
+          description: `Rejection ID: ${approvalData.approvalId}`,
+        });
+      }
+      loadTenders();
+    } catch (error) {
+      toast.error(`Failed to ${approvalAction} tender`);
+    }
+  };
 
   const stats = [
     {
@@ -85,11 +135,92 @@ const DeanDashboard = () => {
         ) : (
           <div className="grid gap-4">
             {pendingTenders.map(tender => (
-              <TenderCard key={tender.id} tender={tender} />
+              <Card key={tender.id} className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
+                        {tender.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{tender.description}</p>
+                    </div>
+                    <Badge variant="secondary">Pending</Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Building className="h-4 w-4" />
+                      <span>{tender.department}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>{tender.coordinatorName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Ends: {new Date(tender.endDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2 border-t">
+                    <span className="text-sm text-muted-foreground">Approvals:</span>
+                    <div className="flex gap-2">
+                      <Badge variant={tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? "default" : "secondary"}>
+                        Dean {tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? '✓' : '○'}
+                      </Badge>
+                      <Badge variant={tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? "default" : "secondary"}>
+                        Director {tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? '✓' : '○'}
+                      </Badge>
+                      <Badge variant={tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? "default" : "secondary"}>
+                        Registrar {tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? '✓' : '○'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => navigate(`/tender/${tender.id}`)}
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      className="flex-1"
+                      onClick={() => handleApprovalClick(tender, 'approve')}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => handleApprovalClick(tender, 'reject')}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
+
+      {selectedTender && user && (
+        <ApprovalModal
+          isOpen={showApprovalModal}
+          onClose={() => setShowApprovalModal(false)}
+          onConfirm={handleApprovalConfirm}
+          tenderTitle={selectedTender.title}
+          tenderId={selectedTender.id}
+          userEmail={user.email}
+          userName={user.username}
+          action={approvalAction}
+        />
+      )}
     </div>
   );
 };

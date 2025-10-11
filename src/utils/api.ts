@@ -57,7 +57,18 @@ export const api = {
     localStorage.setItem('tms_tenders', JSON.stringify(filtered));
   },
 
-  approveTender: async (id: string, role: 'dean' | 'director' | 'registrar'): Promise<Tender> => {
+  approveTender: async (
+    id: string, 
+    role: 'dean' | 'director' | 'registrar',
+    approvalData: {
+      approvalId: string;
+      otp: string;
+      digitalSignature: string;
+      timestamp: string;
+      approvedBy: string;
+      approverEmail: string;
+    }
+  ): Promise<Tender> => {
     await delay(500);
     const stored = localStorage.getItem('tms_tenders');
     const tenders: Tender[] = stored ? JSON.parse(stored) : [];
@@ -65,12 +76,41 @@ export const api = {
     
     if (!tender) throw new Error('Tender not found');
     
-    tender.approvals[role] = true;
+    tender.approvals[role] = approvalData;
     
     // Check if all approvals are complete
-    if (tender.approvals.dean && tender.approvals.director && tender.approvals.registrar) {
+    const allApproved = 
+      tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' &&
+      tender.approvals.director && typeof tender.approvals.director !== 'boolean' &&
+      tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean';
+    
+    if (allApproved) {
       tender.status = 'approved';
     }
+    
+    localStorage.setItem('tms_tenders', JSON.stringify(tenders));
+    return tender;
+  },
+
+  rejectTender: async (
+    id: string,
+    role: 'dean' | 'director' | 'registrar',
+    rejectionData: {
+      approvalId: string;
+      timestamp: string;
+      rejectedBy: string;
+      rejectorEmail: string;
+    }
+  ): Promise<Tender> => {
+    await delay(500);
+    const stored = localStorage.getItem('tms_tenders');
+    const tenders: Tender[] = stored ? JSON.parse(stored) : [];
+    const tender = tenders.find(t => t.id === id);
+    
+    if (!tender) throw new Error('Tender not found');
+    
+    tender.approvals[role] = false;
+    tender.status = 'draft'; // Reset to draft on rejection
     
     localStorage.setItem('tms_tenders', JSON.stringify(tenders));
     return tender;

@@ -131,17 +131,37 @@ const TenderDetails = () => {
           {tender.status === 'pending_approval' && (
             <div className="pt-6 border-t">
               <h2 className="text-lg font-semibold text-foreground mb-3">Approval Status</h2>
-              <div className="flex gap-3">
-                <Badge variant={tender.approvals.dean ? "default" : "secondary"}>
-                  Dean {tender.approvals.dean ? '✓' : '○'}
+              <div className="flex gap-3 flex-wrap">
+                <Badge variant={tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? "default" : "secondary"}>
+                  Dean {tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? '✓' : '○'}
                 </Badge>
-                <Badge variant={tender.approvals.director ? "default" : "secondary"}>
-                  Director {tender.approvals.director ? '✓' : '○'}
+                <Badge variant={tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? "default" : "secondary"}>
+                  Director {tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? '✓' : '○'}
                 </Badge>
-                <Badge variant={tender.approvals.registrar ? "default" : "secondary"}>
-                  Registrar {tender.approvals.registrar ? '✓' : '○'}
+                <Badge variant={tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? "default" : "secondary"}>
+                  Registrar {tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? '✓' : '○'}
                 </Badge>
               </div>
+
+              {/* Show approval details if available */}
+              {(tender.approvals.dean && typeof tender.approvals.dean !== 'boolean') && (
+                <div className="mt-4 p-3 bg-muted/30 rounded-lg text-xs">
+                  <p className="font-medium text-foreground">Dean Approval ID: {tender.approvals.dean.approvalId}</p>
+                  <p className="text-muted-foreground">Approved by: {tender.approvals.dean.approvedBy}</p>
+                </div>
+              )}
+              {(tender.approvals.director && typeof tender.approvals.director !== 'boolean') && (
+                <div className="mt-2 p-3 bg-muted/30 rounded-lg text-xs">
+                  <p className="font-medium text-foreground">Director Approval ID: {tender.approvals.director.approvalId}</p>
+                  <p className="text-muted-foreground">Approved by: {tender.approvals.director.approvedBy}</p>
+                </div>
+              )}
+              {(tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean') && (
+                <div className="mt-2 p-3 bg-muted/30 rounded-lg text-xs">
+                  <p className="font-medium text-foreground">Registrar Approval ID: {tender.approvals.registrar.approvalId}</p>
+                  <p className="text-muted-foreground">Approved by: {tender.approvals.registrar.approvedBy}</p>
+                </div>
+              )}
             </div>
           )}
         </Card>

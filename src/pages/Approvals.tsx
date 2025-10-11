@@ -7,11 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Building, Calendar, User } from 'lucide-react';
+import ApprovalModal, { ApprovalData } from '@/components/ApprovalModal';
 
 const Approvals = () => {
   const { user } = useAuth();
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
     loadPendingTenders();
@@ -29,19 +33,42 @@ const Approvals = () => {
     }
   };
 
-  const handleApprove = async (tenderId: string) => {
-    try {
-      const roleKey = user?.role as 'dean' | 'director' | 'registrar';
-      await api.approveTender(tenderId, roleKey);
-      toast.success('Tender approved successfully');
-      loadPendingTenders();
-    } catch (error) {
-      toast.error('Failed to approve tender');
-    }
+  const handleApprovalClick = (tender: Tender, action: 'approve' | 'reject') => {
+    setSelectedTender(tender);
+    setApprovalAction(action);
+    setShowApprovalModal(true);
   };
 
-  const handleReject = async (tenderId: string) => {
-    toast.info('Rejection feature coming soon');
+  const handleApprovalConfirm = async (approvalData: ApprovalData) => {
+    if (!selectedTender || !user) return;
+
+    try {
+      const roleKey = user.role as 'dean' | 'director' | 'registrar';
+      
+      if (approvalAction === 'approve') {
+        await api.approveTender(selectedTender.id, roleKey, {
+          ...approvalData,
+          approvedBy: user.username,
+          approverEmail: user.email,
+        });
+        toast.success('Tender approved successfully', {
+          description: `Approval ID: ${approvalData.approvalId}`,
+        });
+      } else {
+        await api.rejectTender(selectedTender.id, roleKey, {
+          approvalId: approvalData.approvalId,
+          timestamp: approvalData.timestamp,
+          rejectedBy: user.username,
+          rejectorEmail: user.email,
+        });
+        toast.error('Tender rejected', {
+          description: `Rejection ID: ${approvalData.approvalId}`,
+        });
+      }
+      loadPendingTenders();
+    } catch (error) {
+      toast.error(`Failed to ${approvalAction} tender`);
+    }
   };
 
   const getApprovalStatus = (tender: Tender) => {
@@ -98,22 +125,31 @@ const Approvals = () => {
                   <div className="flex gap-2 pt-2 border-t">
                     <span className="text-sm text-muted-foreground">Approvals:</span>
                     <div className="flex gap-2">
-                      <Badge variant={tender.approvals.dean ? "default" : "secondary"}>
-                        Dean {tender.approvals.dean ? '✓' : '○'}
+                      <Badge variant={tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? "default" : "secondary"}>
+                        Dean {tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? '✓' : '○'}
                       </Badge>
-                      <Badge variant={tender.approvals.director ? "default" : "secondary"}>
-                        Director {tender.approvals.director ? '✓' : '○'}
+                      <Badge variant={tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? "default" : "secondary"}>
+                        Director {tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? '✓' : '○'}
                       </Badge>
-                      <Badge variant={tender.approvals.registrar ? "default" : "secondary"}>
-                        Registrar {tender.approvals.registrar ? '✓' : '○'}
+                      <Badge variant={tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? "default" : "secondary"}>
+                        Registrar {tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? '✓' : '○'}
                       </Badge>
                     </div>
                   </div>
 
-                  {alreadyApproved !== undefined ? (
+                  {alreadyApproved !== undefined && typeof alreadyApproved !== 'boolean' ? (
                     <div className="pt-4 border-t">
-                      <Badge variant={alreadyApproved ? "default" : "destructive"}>
-                        {alreadyApproved ? 'Approved by you' : 'Rejected by you'}
+                      <Badge variant="default">
+                        Approved by you
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Approval ID: {alreadyApproved.approvalId}
+                      </p>
+                    </div>
+                  ) : alreadyApproved === false ? (
+                    <div className="pt-4 border-t">
+                      <Badge variant="destructive">
+                        Rejected by you
                       </Badge>
                     </div>
                   ) : (
@@ -121,7 +157,7 @@ const Approvals = () => {
                       <Button 
                         variant="default" 
                         className="flex-1"
-                        onClick={() => handleApprove(tender.id)}
+                        onClick={() => handleApprovalClick(tender, 'approve')}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve
@@ -129,7 +165,7 @@ const Approvals = () => {
                       <Button 
                         variant="destructive" 
                         className="flex-1"
-                        onClick={() => handleReject(tender.id)}
+                        onClick={() => handleApprovalClick(tender, 'reject')}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject
@@ -141,6 +177,19 @@ const Approvals = () => {
             );
           })}
         </div>
+      )}
+
+      {selectedTender && user && (
+        <ApprovalModal
+          isOpen={showApprovalModal}
+          onClose={() => setShowApprovalModal(false)}
+          onConfirm={handleApprovalConfirm}
+          tenderTitle={selectedTender.title}
+          tenderId={selectedTender.id}
+          userEmail={user.email}
+          userName={user.username}
+          action={approvalAction}
+        />
       )}
     </div>
   );
