@@ -1,4 +1,4 @@
-import { Tender, Bid, TenderStatus } from './mockData';
+import { Tender, Bid, TenderStatus, EMDPayment } from './mockData';
 
 // Mock API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -135,6 +135,21 @@ export const api = {
     const stored = localStorage.getItem('tms_bids');
     const bids: Bid[] = stored ? JSON.parse(stored) : [];
     bids.push(newBid);
+    
+    // Auto-evaluate lowest bid
+    const tenderBids = bids.filter(b => b.tenderId === bid.tenderId);
+    const lowestBid = tenderBids.reduce((prev, current) => 
+      current.quotationAmount < prev.quotationAmount ? current : prev
+    );
+    
+    // Mark all bids as not lowest first
+    tenderBids.forEach(b => b.isLowest = false);
+    // Mark the lowest bid
+    const lowestBidIndex = bids.findIndex(b => b.id === lowestBid.id);
+    if (lowestBidIndex !== -1) {
+      bids[lowestBidIndex].isLowest = true;
+    }
+    
     localStorage.setItem('tms_bids', JSON.stringify(bids));
     
     return newBid;
@@ -156,9 +171,47 @@ export const api = {
     const storedTenders = localStorage.getItem('tms_tenders');
     const tenders: Tender[] = storedTenders ? JSON.parse(storedTenders) : [];
     const tender = tenders.find(t => t.id === tenderId);
-    if (tender) {
+    if (tender && bid) {
       tender.status = 'awarded';
+      tender.awardedTo = {
+        contractorId: bid.contractorId,
+        contractorName: bid.contractorName,
+        amount: bid.quotationAmount,
+        bidId: bid.id,
+      };
       localStorage.setItem('tms_tenders', JSON.stringify(tenders));
     }
+  },
+
+  // EMD Payment APIs
+  getEMDPayments: async (contractorId?: string): Promise<EMDPayment[]> => {
+    await delay(300);
+    const stored = localStorage.getItem('tms_emd_payments');
+    const allPayments: EMDPayment[] = stored ? JSON.parse(stored) : [];
+    return contractorId ? allPayments.filter(p => p.contractorId === contractorId) : allPayments;
+  },
+
+  hasEMDPayment: async (tenderId: string, contractorId: string): Promise<boolean> => {
+    await delay(200);
+    const stored = localStorage.getItem('tms_emd_payments');
+    const payments: EMDPayment[] = stored ? JSON.parse(stored) : [];
+    return payments.some(p => p.tenderId === tenderId && p.contractorId === contractorId && p.status === 'success');
+  },
+
+  processEMDPayment: async (payment: Omit<EMDPayment, 'id' | 'paymentDate' | 'status'>): Promise<EMDPayment> => {
+    await delay(1000); // Simulate payment processing
+    const newPayment: EMDPayment = {
+      ...payment,
+      id: Date.now().toString(),
+      paymentDate: new Date().toISOString(),
+      status: 'success',
+    };
+    
+    const stored = localStorage.getItem('tms_emd_payments');
+    const payments: EMDPayment[] = stored ? JSON.parse(stored) : [];
+    payments.push(newPayment);
+    localStorage.setItem('tms_emd_payments', JSON.stringify(payments));
+    
+    return newPayment;
   },
 };

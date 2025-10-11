@@ -20,10 +20,17 @@ export interface Tender {
   coordinatorId: string;
   coordinatorName: string;
   status: TenderStatus;
+  emdAmount: number;
   approvals: {
     dean: boolean | ApprovalRecord;
     director: boolean | ApprovalRecord;
     registrar: boolean | ApprovalRecord;
+  };
+  awardedTo?: {
+    contractorId: string;
+    contractorName: string;
+    amount: number;
+    bidId: string;
   };
   createdAt: string;
 }
@@ -34,11 +41,21 @@ export interface Bid {
   contractorId: string;
   contractorName: string;
   quotationAmount: number;
+  expectedCompletionTime: string;
   remarks: string;
   document?: string;
   submittedAt: string;
   isLowest?: boolean;
   isAwarded?: boolean;
+}
+
+export interface EMDPayment {
+  id: string;
+  tenderId: string;
+  contractorId: string;
+  amount: number;
+  paymentDate: string;
+  status: 'success' | 'pending' | 'failed';
 }
 
 export const mockTenders: Tender[] = [
@@ -53,6 +70,7 @@ export const mockTenders: Tender[] = [
     coordinatorId: '1',
     coordinatorName: 'Dr. Rajesh Kumar',
     status: 'open',
+    emdAmount: 50000,
     approvals: {
       dean: true,
       director: true,
@@ -71,6 +89,7 @@ export const mockTenders: Tender[] = [
     coordinatorId: '2',
     coordinatorName: 'Prof. Amit Sharma',
     status: 'pending_approval',
+    emdAmount: 100000,
     approvals: {
       dean: true,
       director: false,
@@ -89,6 +108,7 @@ export const mockTenders: Tender[] = [
     coordinatorId: '3',
     coordinatorName: 'Dr. Priya Singh',
     status: 'approved',
+    emdAmount: 25000,
     approvals: {
       dean: true,
       director: true,
@@ -105,6 +125,7 @@ export const mockBids: Bid[] = [
     contractorId: 'c1',
     contractorName: 'Tech Solutions Ltd.',
     quotationAmount: 2500000,
+    expectedCompletionTime: '90 days',
     remarks: 'High-quality Dell computers with 3-year warranty',
     submittedAt: '2025-01-18',
     isLowest: true,
@@ -115,6 +136,7 @@ export const mockBids: Bid[] = [
     contractorId: 'c2',
     contractorName: 'Digital Enterprises',
     quotationAmount: 2800000,
+    expectedCompletionTime: '75 days',
     remarks: 'HP computers with extended support',
     submittedAt: '2025-01-19',
   },
@@ -124,6 +146,7 @@ export const mockBids: Bid[] = [
     contractorId: 'c3',
     contractorName: 'ComputerWorld Inc.',
     quotationAmount: 2650000,
+    expectedCompletionTime: '85 days',
     remarks: 'Lenovo systems with premium service',
     submittedAt: '2025-01-20',
   },

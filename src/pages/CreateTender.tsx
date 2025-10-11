@@ -20,13 +20,19 @@ const CreateTender = () => {
     requirements: '',
     startDate: '',
     endDate: '',
+    emdAmount: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.description || !formData.startDate || !formData.endDate) {
+    if (!formData.title || !formData.description || !formData.startDate || !formData.endDate || !formData.emdAmount) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (parseFloat(formData.emdAmount) <= 0) {
+      toast.error('EMD amount must be greater than 0');
       return;
     }
 
@@ -39,6 +45,7 @@ const CreateTender = () => {
     try {
       await api.createTender({
         ...formData,
+        emdAmount: parseFloat(formData.emdAmount),
         department: user?.department || '',
         coordinatorId: user?.id || '',
         coordinatorName: user?.username || '',
@@ -128,6 +135,21 @@ const CreateTender = () => {
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emdAmount">EMD Amount (₹) *</Label>
+            <Input
+              id="emdAmount"
+              type="number"
+              placeholder="Enter Earnest Money Deposit amount"
+              value={formData.emdAmount}
+              onChange={(e) => setFormData({ ...formData, emdAmount: e.target.value })}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              This is a refundable security deposit that contractors must pay to view tender details and submit bids.
+            </p>
           </div>
 
           <div className="flex gap-4 pt-4">
