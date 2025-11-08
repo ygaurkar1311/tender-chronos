@@ -22,6 +22,34 @@ const CreateTender = () => {
     endDate: '',
     emdAmount: '',
   });
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfError, setPdfError] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPdfError('');
+
+    if (!file) {
+      setPdfFile(null);
+      return;
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setPdfError('Only PDF files are allowed');
+      setPdfFile(null);
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setPdfError('File size must be less than 5MB');
+      setPdfFile(null);
+      return;
+    }
+
+    setPdfFile(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +71,18 @@ const CreateTender = () => {
 
     setLoading(true);
     try {
+      // Convert PDF to base64 for storage (in real app, upload to server)
+      let pdfData = '';
+      let pdfFileName = '';
+      if (pdfFile) {
+        const reader = new FileReader();
+        pdfData = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(pdfFile);
+        });
+        pdfFileName = pdfFile.name;
+      }
+
       await api.createTender({
         ...formData,
         emdAmount: parseFloat(formData.emdAmount),
@@ -50,13 +90,15 @@ const CreateTender = () => {
         coordinatorId: user?.id || '',
         coordinatorName: user?.username || '',
         status: 'pending_approval',
+        pdfFile: pdfData,
+        pdfFileName: pdfFileName,
         approvals: {
           dean: false,
           director: false,
           registrar: false,
         },
       });
-      toast.success('Tender created successfully!');
+      toast.success('Tender created successfully and sent for approval!');
       navigate('/dashboard');
     } catch (error) {
       toast.error('Failed to create tender');
@@ -149,6 +191,26 @@ const CreateTender = () => {
             />
             <p className="text-xs text-muted-foreground">
               This is a refundable security deposit that contractors must pay to view tender details and submit bids.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pdfFile">Tender Document (PDF)</Label>
+            <Input
+              id="pdfFile"
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              className="cursor-pointer"
+            />
+            {pdfError && (
+              <p className="text-xs text-destructive">{pdfError}</p>
+            )}
+            {pdfFile && (
+              <p className="text-xs text-success">✓ {pdfFile.name} selected</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Upload a PDF document (max 5MB). This will be viewable by approvers.
             </p>
           </div>
 

@@ -100,6 +100,7 @@ export const api = {
       timestamp: string;
       rejectedBy: string;
       rejectorEmail: string;
+      remarks: string;
     }
   ): Promise<Tender> => {
     await delay(500);
@@ -111,6 +112,16 @@ export const api = {
     
     tender.approvals[role] = false;
     tender.status = 'draft'; // Reset to draft on rejection
+    
+    // Store rejection remarks
+    if (!tender.rejections) tender.rejections = {};
+    tender.rejections[role] = {
+      rejectionId: rejectionData.approvalId,
+      timestamp: rejectionData.timestamp,
+      rejectedBy: rejectionData.rejectedBy,
+      rejectorEmail: rejectionData.rejectorEmail,
+      remarks: rejectionData.remarks,
+    };
     
     localStorage.setItem('tms_tenders', JSON.stringify(tenders));
     return tender;

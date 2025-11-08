@@ -9,6 +9,14 @@ export interface ApprovalRecord {
   approverEmail: string;
 }
 
+export interface RejectionRecord {
+  rejectionId: string;
+  timestamp: string;
+  rejectedBy: string;
+  rejectorEmail: string;
+  remarks: string;
+}
+
 export interface Tender {
   id: string;
   title: string;
@@ -21,10 +29,17 @@ export interface Tender {
   coordinatorName: string;
   status: TenderStatus;
   emdAmount: number;
+  pdfFile?: string;
+  pdfFileName?: string;
   approvals: {
     dean: boolean | ApprovalRecord;
     director: boolean | ApprovalRecord;
     registrar: boolean | ApprovalRecord;
+  };
+  rejections?: {
+    dean?: RejectionRecord;
+    director?: RejectionRecord;
+    registrar?: RejectionRecord;
   };
   awardedTo?: {
     contractorId: string;

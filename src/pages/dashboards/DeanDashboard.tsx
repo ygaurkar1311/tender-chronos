@@ -6,8 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle, XCircle, Building, Calendar, User } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Building, Calendar, User, Eye } from 'lucide-react';
 import ApprovalModal, { ApprovalData } from '@/components/ApprovalModal';
+import RejectionModal from '@/components/RejectionModal';
+import PDFViewerModal from '@/components/PDFViewerModal';
 import { useNavigate } from 'react-router-dom';
 
 const DeanDashboard = () => {
@@ -18,6 +20,8 @@ const DeanDashboard = () => {
   const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showPDFModal, setShowPDFModal] = useState(false);
 
   useEffect(() => {
     loadTenders();
@@ -43,7 +47,16 @@ const DeanDashboard = () => {
   const handleApprovalClick = (tender: Tender, action: 'approve' | 'reject') => {
     setSelectedTender(tender);
     setApprovalAction(action);
-    setShowApprovalModal(true);
+    if (action === 'approve') {
+      setShowApprovalModal(true);
+    } else {
+      setShowRejectionModal(true);
+    }
+  };
+
+  const handlePDFView = (tender: Tender) => {
+    setSelectedTender(tender);
+    setShowPDFModal(true);
   };
 
   const handleApprovalConfirm = async (approvalData: ApprovalData) => {
@@ -59,20 +72,28 @@ const DeanDashboard = () => {
         toast.success('Tender approved successfully', {
           description: `Approval ID: ${approvalData.approvalId}`,
         });
-      } else {
-        await api.rejectTender(selectedTender.id, 'dean', {
-          approvalId: approvalData.approvalId,
-          timestamp: approvalData.timestamp,
-          rejectedBy: user.username,
-          rejectorEmail: user.email,
-        });
-        toast.error('Tender rejected', {
-          description: `Rejection ID: ${approvalData.approvalId}`,
-        });
       }
       loadTenders();
     } catch (error) {
-      toast.error(`Failed to ${approvalAction} tender`);
+      toast.error('Failed to approve tender');
+    }
+  };
+
+  const handleRejectionConfirm = async (rejectionData: { approvalId: string; timestamp: string; remarks: string }) => {
+    if (!selectedTender || !user) return;
+
+    try {
+      await api.rejectTender(selectedTender.id, 'dean', {
+        ...rejectionData,
+        rejectedBy: user.username,
+        rejectorEmail: user.email,
+      });
+      toast.error('Tender rejected with remarks', {
+        description: `Rejection ID: ${rejectionData.approvalId}`,
+      });
+      loadTenders();
+    } catch (error) {
+      toast.error('Failed to reject tender');
     }
   };
 
@@ -180,11 +201,19 @@ const DeanDashboard = () => {
                   <div className="flex gap-3 pt-4 border-t">
                     <Button 
                       variant="outline" 
-                      className="flex-1"
                       onClick={() => navigate(`/tender/${tender.id}`)}
                     >
                       View Details
                     </Button>
+                    {tender.pdfFile && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => handlePDFView(tender)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View PDF
+                      </Button>
+                    )}
                     <Button 
                       variant="default" 
                       className="flex-1"
@@ -210,16 +239,33 @@ const DeanDashboard = () => {
       </div>
 
       {selectedTender && user && (
-        <ApprovalModal
-          isOpen={showApprovalModal}
-          onClose={() => setShowApprovalModal(false)}
-          onConfirm={handleApprovalConfirm}
-          tenderTitle={selectedTender.title}
-          tenderId={selectedTender.id}
-          userEmail={user.email}
-          userName={user.username}
-          action={approvalAction}
-        />
+        <>
+          <ApprovalModal
+            isOpen={showApprovalModal}
+            onClose={() => setShowApprovalModal(false)}
+            onConfirm={handleApprovalConfirm}
+            tenderTitle={selectedTender.title}
+            tenderId={selectedTender.id}
+            userEmail={user.email}
+            userName={user.username}
+            action="approve"
+          />
+          <RejectionModal
+            isOpen={showRejectionModal}
+            onClose={() => setShowRejectionModal(false)}
+            onConfirm={handleRejectionConfirm}
+            tenderTitle={selectedTender.title}
+            tenderId={selectedTender.id}
+            userEmail={user.email}
+            userName={user.username}
+          />
+          <PDFViewerModal
+            isOpen={showPDFModal}
+            onClose={() => setShowPDFModal(false)}
+            pdfFile={selectedTender.pdfFile}
+            fileName={selectedTender.pdfFileName}
+          />
+        </>
       )}
     </div>
   );

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/utils/api';
 import { Tender } from '@/utils/mockData';
-import TenderCard from '@/components/TenderCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Clock, CheckCircle } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, XCircle, AlertCircle, Edit } from 'lucide-react';
 
 const CoordinatorDashboard = () => {
   const { user } = useAuth();
@@ -100,9 +101,110 @@ const CoordinatorDashboard = () => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {tenders.map(tender => (
-              <TenderCard key={tender.id} tender={tender} />
-            ))}
+            {tenders.map(tender => {
+              const hasRejections = tender.rejections && 
+                (tender.rejections.dean || tender.rejections.director || tender.rejections.registrar);
+              const isRejected = tender.status === 'draft' && hasRejections;
+
+              return (
+                <Card key={tender.id} className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {tender.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {tender.description}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant={
+                          tender.status === 'open' || tender.status === 'approved' ? 'default' :
+                          tender.status === 'pending_approval' ? 'secondary' :
+                          isRejected ? 'destructive' : 'outline'
+                        }
+                      >
+                        {tender.status === 'draft' && isRejected ? '❌ Rejected' :
+                         tender.status === 'pending_approval' ? '🟡 Pending Approval' :
+                         tender.status === 'approved' ? '✅ Approved' :
+                         tender.status === 'open' ? '✅ Open' :
+                         tender.status === 'awarded' ? '🎉 Awarded' :
+                         tender.status}
+                      </Badge>
+                    </div>
+
+                    {isRejected && (
+                      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-destructive font-semibold">
+                          <AlertCircle className="h-5 w-5" />
+                          <span>Rejection Remarks</span>
+                        </div>
+                        {tender.rejections?.director && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Director:</p>
+                            <p className="text-sm text-muted-foreground pl-4">
+                              {tender.rejections.director.remarks}
+                            </p>
+                          </div>
+                        )}
+                        {tender.rejections?.dean && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Dean (Procurement):</p>
+                            <p className="text-sm text-muted-foreground pl-4">
+                              {tender.rejections.dean.remarks}
+                            </p>
+                          </div>
+                        )}
+                        {tender.rejections?.registrar && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Registrar:</p>
+                            <p className="text-sm text-muted-foreground pl-4">
+                              {tender.rejections.registrar.remarks}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Approvals:</span>
+                      <div className="flex gap-2">
+                        <Badge variant={tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? "default" : "secondary"}>
+                          Dean {tender.approvals.dean && typeof tender.approvals.dean !== 'boolean' ? '✓' : '○'}
+                        </Badge>
+                        <Badge variant={tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? "default" : "secondary"}>
+                          Director {tender.approvals.director && typeof tender.approvals.director !== 'boolean' ? '✓' : '○'}
+                        </Badge>
+                        <Badge variant={tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? "default" : "secondary"}>
+                          Registrar {tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean' ? '✓' : '○'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => navigate(`/tender/${tender.id}`)}
+                      >
+                        View Details
+                      </Button>
+                      {isRejected && (
+                        <Button 
+                          variant="default"
+                          className="flex-1"
+                          onClick={() => navigate(`/create-tender?edit=${tender.id}`)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit & Resubmit
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

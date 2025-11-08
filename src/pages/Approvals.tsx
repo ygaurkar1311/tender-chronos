@@ -6,8 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Building, Calendar, User } from 'lucide-react';
+import { CheckCircle, XCircle, Building, Calendar, User, Eye } from 'lucide-react';
 import ApprovalModal, { ApprovalData } from '@/components/ApprovalModal';
+import RejectionModal from '@/components/RejectionModal';
+import PDFViewerModal from '@/components/PDFViewerModal';
 
 const Approvals = () => {
   const { user } = useAuth();
@@ -16,6 +18,8 @@ const Approvals = () => {
   const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showPDFModal, setShowPDFModal] = useState(false);
 
   useEffect(() => {
     loadPendingTenders();
@@ -36,7 +40,16 @@ const Approvals = () => {
   const handleApprovalClick = (tender: Tender, action: 'approve' | 'reject') => {
     setSelectedTender(tender);
     setApprovalAction(action);
-    setShowApprovalModal(true);
+    if (action === 'approve') {
+      setShowApprovalModal(true);
+    } else {
+      setShowRejectionModal(true);
+    }
+  };
+
+  const handlePDFView = (tender: Tender) => {
+    setSelectedTender(tender);
+    setShowPDFModal(true);
   };
 
   const handleApprovalConfirm = async (approvalData: ApprovalData) => {
@@ -44,30 +57,36 @@ const Approvals = () => {
 
     try {
       const roleKey = user.role as 'dean' | 'director' | 'registrar';
-      
-      if (approvalAction === 'approve') {
-        await api.approveTender(selectedTender.id, roleKey, {
-          ...approvalData,
-          approvedBy: user.username,
-          approverEmail: user.email,
-        });
-        toast.success('Tender approved successfully', {
-          description: `Approval ID: ${approvalData.approvalId}`,
-        });
-      } else {
-        await api.rejectTender(selectedTender.id, roleKey, {
-          approvalId: approvalData.approvalId,
-          timestamp: approvalData.timestamp,
-          rejectedBy: user.username,
-          rejectorEmail: user.email,
-        });
-        toast.error('Tender rejected', {
-          description: `Rejection ID: ${approvalData.approvalId}`,
-        });
-      }
+      await api.approveTender(selectedTender.id, roleKey, {
+        ...approvalData,
+        approvedBy: user.username,
+        approverEmail: user.email,
+      });
+      toast.success('Tender approved successfully', {
+        description: `Approval ID: ${approvalData.approvalId}`,
+      });
       loadPendingTenders();
     } catch (error) {
-      toast.error(`Failed to ${approvalAction} tender`);
+      toast.error('Failed to approve tender');
+    }
+  };
+
+  const handleRejectionConfirm = async (rejectionData: { approvalId: string; timestamp: string; remarks: string }) => {
+    if (!selectedTender || !user) return;
+
+    try {
+      const roleKey = user.role as 'dean' | 'director' | 'registrar';
+      await api.rejectTender(selectedTender.id, roleKey, {
+        ...rejectionData,
+        rejectedBy: user.username,
+        rejectorEmail: user.email,
+      });
+      toast.error('Tender rejected with remarks', {
+        description: `Rejection ID: ${rejectionData.approvalId}`,
+      });
+      loadPendingTenders();
+    } catch (error) {
+      toast.error('Failed to reject tender');
     }
   };
 
@@ -154,6 +173,15 @@ const Approvals = () => {
                     </div>
                   ) : (
                     <div className="flex gap-3 pt-4 border-t">
+                      {tender.pdfFile && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => handlePDFView(tender)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View PDF
+                        </Button>
+                      )}
                       <Button 
                         variant="default" 
                         className="flex-1"
@@ -180,16 +208,33 @@ const Approvals = () => {
       )}
 
       {selectedTender && user && (
-        <ApprovalModal
-          isOpen={showApprovalModal}
-          onClose={() => setShowApprovalModal(false)}
-          onConfirm={handleApprovalConfirm}
-          tenderTitle={selectedTender.title}
-          tenderId={selectedTender.id}
-          userEmail={user.email}
-          userName={user.username}
-          action={approvalAction}
-        />
+        <>
+          <ApprovalModal
+            isOpen={showApprovalModal}
+            onClose={() => setShowApprovalModal(false)}
+            onConfirm={handleApprovalConfirm}
+            tenderTitle={selectedTender.title}
+            tenderId={selectedTender.id}
+            userEmail={user.email}
+            userName={user.username}
+            action="approve"
+          />
+          <RejectionModal
+            isOpen={showRejectionModal}
+            onClose={() => setShowRejectionModal(false)}
+            onConfirm={handleRejectionConfirm}
+            tenderTitle={selectedTender.title}
+            tenderId={selectedTender.id}
+            userEmail={user.email}
+            userName={user.username}
+          />
+          <PDFViewerModal
+            isOpen={showPDFModal}
+            onClose={() => setShowPDFModal(false)}
+            pdfFile={selectedTender.pdfFile}
+            fileName={selectedTender.pdfFileName}
+          />
+        </>
       )}
     </div>
   );
