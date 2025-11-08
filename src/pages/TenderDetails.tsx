@@ -173,7 +173,7 @@ const TenderDetails = () => {
                 </p>
                 <div className="bg-muted/50 p-4 rounded-lg inline-block mb-4">
                   <p className="text-sm text-muted-foreground">EMD Amount (Refundable)</p>
-                  <p className="text-3xl font-bold text-primary">₹{tender.emdAmount.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-primary">₹{(tender.emdAmount || 0).toLocaleString()}</p>
                 </div>
               </div>
               <Button onClick={() => setShowEMDModal(true)} size="lg">

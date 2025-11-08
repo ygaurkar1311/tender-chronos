@@ -124,7 +124,7 @@ const Awards = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <IndianRupee className="h-4 w-4" />
-                        EMD: ₹{tender.emdAmount.toLocaleString()}
+                        EMD: ₹{(tender.emdAmount || 0).toLocaleString()}
                       </span>
                     </div>
                   </div>

@@ -83,7 +83,7 @@ const EMDPaymentModal = ({ open, onClose, onSuccess, tenderTitle, emdAmount }: E
           <form onSubmit={handlePayment} className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg space-y-2">
               <p className="text-sm text-muted-foreground">Tender: {tenderTitle}</p>
-              <p className="text-2xl font-bold text-foreground">₹{emdAmount.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-foreground">₹{(emdAmount || 0).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">EMD Amount (Refundable)</p>
             </div>
 
@@ -138,7 +138,7 @@ const EMDPaymentModal = ({ open, onClose, onSuccess, tenderTitle, emdAmount }: E
                     Processing...
                   </>
                 ) : (
-                  <>Pay ₹{emdAmount.toLocaleString()}</>
+                  <>Pay ₹{(emdAmount || 0).toLocaleString()}</>
                 )}
               </Button>
             </DialogFooter>

@@ -87,7 +87,7 @@ const OpenTenders = () => {
                       <div className="text-sm">
                         <p className="text-muted-foreground">EMD Amount</p>
                         <p className="font-medium text-foreground">
-                          ₹{tender.emdAmount.toLocaleString()}
+                          ₹{(tender.emdAmount || 0).toLocaleString()}
                         </p>
                       </div>
                     </div>
