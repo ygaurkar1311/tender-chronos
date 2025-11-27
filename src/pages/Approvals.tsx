@@ -66,8 +66,10 @@ const Approvals = () => {
         description: `Approval ID: ${approvalData.approvalId}`,
       });
       loadPendingTenders();
-    } catch (error) {
-      toast.error('Failed to approve tender');
+    } catch (error: any) {
+      toast.error('Failed to approve tender', {
+        description: error.message || 'An error occurred',
+      });
     }
   };
 

@@ -1,4 +1,4 @@
-export type TenderStatus = 'draft' | 'pending_approval' | 'approved' | 'open' | 'closed' | 'awarded';
+export type TenderStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'open' | 'closed' | 'awarded';
 
 export interface ApprovalRecord {
   approvalId: string;
