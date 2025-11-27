@@ -76,6 +76,20 @@ export const api = {
     
     if (!tender) throw new Error('Tender not found');
     
+    // Sequential approval check: Registrar → Dean → Director
+    const isRegistrarApproved = tender.approvals.registrar && typeof tender.approvals.registrar !== 'boolean';
+    const isDeanApproved = tender.approvals.dean && typeof tender.approvals.dean !== 'boolean';
+
+    // Dean can only approve after Registrar has approved
+    if (role === 'dean' && !isRegistrarApproved) {
+      throw new Error('Registrar must approve first');
+    }
+    
+    // Director can only approve after both Registrar and Dean have approved
+    if (role === 'director' && (!isRegistrarApproved || !isDeanApproved)) {
+      throw new Error('Registrar and Dean must approve first');
+    }
+    
     tender.approvals[role] = approvalData;
     
     // Check if all approvals are complete
@@ -111,7 +125,7 @@ export const api = {
     if (!tender) throw new Error('Tender not found');
     
     tender.approvals[role] = false;
-    tender.status = 'draft'; // Reset to draft on rejection
+    tender.status = 'rejected'; // Set status to rejected
     
     // Store rejection remarks
     if (!tender.rejections) tender.rejections = {};
